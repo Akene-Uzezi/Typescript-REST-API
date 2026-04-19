@@ -5,6 +5,7 @@ import compression from "compression";
 import cors from "cors";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+import router from "./router/index.routes.js";
 dotenv.config();
 
 const app = express();
@@ -26,3 +27,4 @@ const MongoUri = process.env.MongoUri;
 mongoose.Promise = Promise;
 mongoose.connect(MongoUri as string);
 mongoose.connection.on("error", (err: Error) => console.log(err));
+app.use("/", router());
