@@ -1,6 +1,6 @@
 import express from "express";
 import { createUser, getUserByEmail } from "../db/users.js";
-import { authentication, random } from "../helpers/auth.helper.js";
+import { authentication, random, verify } from "../helpers/auth.helper.js";
 
 export const login = async (req: express.Request, res: express.Response) => {
   try {
@@ -9,10 +9,23 @@ export const login = async (req: express.Request, res: express.Response) => {
       return res.sendStatus(400);
     }
 
-    const user = await getUserByEmail(email);
+    const user = await getUserByEmail(email).select("+authentication.password");
     if (!user) {
       return res.sendStatus(400);
     }
+    const isMatch = await verify(password, user.authentication!.password);
+    if (!isMatch) {
+      return res.sendStatus(403);
+    }
+    user.authentication!.sessionToken = await authentication(
+      user._id.toString(),
+    );
+    await user.save();
+    res.cookie("authcook", user.authentication!.sessionToken, {
+      domain: "localhost",
+      path: "/",
+    });
+    res.status(200).json(user).end();
   } catch (err) {
     console.log(err);
     return res.sendStatus(400);
@@ -27,13 +40,11 @@ export const register = async (req: express.Request, res: express.Response) => {
     }
     const existingUser = await getUserByEmail(email);
     if (existingUser) return res.sendStatus(400);
-    const salt = random();
     const user = await createUser({
       email,
       username,
       authentication: {
-        salt,
-        password: authentication(salt, password),
+        password: await authentication(password),
       },
     });
     return res.status(200).json(user).end();
