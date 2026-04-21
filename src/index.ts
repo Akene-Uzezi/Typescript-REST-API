@@ -7,7 +7,6 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import router from "./router/index.routes.js";
 dotenv.config();
-
 const app = express();
 app.use(
   cors({
