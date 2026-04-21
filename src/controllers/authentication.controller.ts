@@ -1,6 +1,7 @@
 import express from "express";
 import { createUser, getUserByEmail } from "../db/users.js";
 import { authentication, random, verify } from "../helpers/auth.helper.js";
+import redisClient from "../helpers/redisClient.helper.js";
 
 export const login = async (req: express.Request, res: express.Response) => {
   try {
@@ -33,6 +34,7 @@ export const login = async (req: express.Request, res: express.Response) => {
 };
 
 export const register = async (req: express.Request, res: express.Response) => {
+  const key = "users:all";
   try {
     const { email, password, username } = req.body;
     if (!email || !password || !username) {
@@ -47,6 +49,8 @@ export const register = async (req: express.Request, res: express.Response) => {
         password: await authentication(password),
       },
     });
+    console.log("clear cache");
+    await redisClient.del(key);
     return res.status(200).json(user).end();
   } catch (err) {
     console.log(err);

@@ -1,16 +1,20 @@
 import express from "express";
-import Redis from "redis";
-const redisClient = Redis.createClient();
-redisClient
-  .connect()
-  .then(() => console.log("connected to redis"))
-  .catch((err) => console.error("redis connecion error", err));
+import redisClient from "../helpers/redisClient.helper.js";
 const expiration: number = 3600;
 import { deleteUserById, getUsers } from "../db/users.js";
 const getAllUsers = async (req: express.Request, res: express.Response) => {
+  const key = "users:all";
   try {
-    const users = await getUsers();
-    return res.status(200).json(users);
+    const cachedUsers = await redisClient.get(key);
+    if (cachedUsers) {
+      console.log("users hit");
+      return res.status(200).json(JSON.parse(cachedUsers));
+    } else {
+      console.log("users hit");
+      const users = await getUsers();
+      redisClient.setEx(key, expiration, JSON.stringify(users));
+      return res.status(200).json(users);
+    }
   } catch (err) {
     console.log(err);
     return res.sendStatus(400);
