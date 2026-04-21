@@ -52,11 +52,23 @@ const getPhotos = async (req: express.Request, res: express.Response) => {
 const getSPhotos = async (req: express.Request, res: express.Response) => {
   try {
     const { id } = req.params;
-    const response = await fetch(
-      `https://jsonplaceholder.typicode.com/photos/${id}`,
-    );
-    const data = await response.json();
-    return res.status(200).json(data);
+    const cachedData = await redisClient.get(`photos?albumId=${id}`);
+    if (cachedData) {
+      console.log("specific hit");
+      return res.status(200).json(JSON.parse(cachedData));
+    } else {
+      console.log("specific miss");
+      const response = await fetch(
+        `https://jsonplaceholder.typicode.com/photos/${id}`,
+      );
+      const data = await response.json();
+      redisClient.setEx(
+        `photos?albumId=${id}`,
+        expiration,
+        JSON.stringify(data),
+      );
+      return res.status(200).json(data);
+    }
   } catch (err) {
     console.log(err);
     return res.sendStatus(404);
